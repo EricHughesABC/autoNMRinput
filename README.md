@@ -1,0 +1,2 @@
+# autoNMRinput
+Submit NMR experiment
