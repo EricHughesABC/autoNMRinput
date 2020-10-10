@@ -75,7 +75,7 @@ experiments = {'N4': {'proton': 'N Proton1.icon',
                       '31P wide': '31P wide',
                       '31P wide Decouple': '31P wide Decouple',
                       'cosy': 'cosy.dur',
-                      '19F sweep': '19F sweep',
+                      '19F sweep': 'C 19F_Sweep_Width',
                       '11B': '11B'},
 
                'B4': {'proton': 'N Proton.dur',
