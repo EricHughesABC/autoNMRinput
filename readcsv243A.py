@@ -6,8 +6,9 @@ import platform
 
 print platform.node()
 
-spectrometers = {'ERIC-PC': 'B4',
-								 'clevinger': 'B4',
+spectrometers = {'DM-CHEM-200': 'B4',
+                 'ERIC-PC': 'B4',
+                 'clevinger': 'B4',
                  'mudd': 'N4',
                  'mcwatt': 'A4'}
 
@@ -100,15 +101,37 @@ experiments = {'N4': {'proton': 'N Proton1.icon',
                       '7Li Standard': 'Li7.dur'}}
 
 # 'N4': "/data/downloads/Eric"
+# 'B4': r"c:\Bruker\Topspin4.0.8\exp\stan\nmr\py\user"
 
-downloads_dir = {'B4': r"c:\Bruker\Topspin4.0.8\exp\stan\nmr\py\user",
-                 'A4': "/data/downloads/Eric",
-                 'N4': "/data/downloads/Eric"}
+if platform.node() == 'DM-CHEM-200':
+    downloads_dir = {'B4': r"w:\downloads\Eric\jython",
+                     'A4': "/data/downloads/Eric",
+                     'N4': "/data/downloads/Eric"}
 
-# 'B4': "/opt/topspin3.2_pl3/prog/tmp"
-auto_dir = {'N4': "/opt/topspin4.0.6/prog/tmp",
-            'A4': "/opt/topspin3.2_pl3/prog/tmp",
-            'B4': r"c:\Bruker\Topspin4.0.8\exp\stan\nmr\py\user"}
+    auto_dir = {'N4': "/opt/topspin4.0.6/prog/tmp",
+                'A4': "/opt/topspin3.2_pl3/prog/tmp",
+                'B4':  r"w:\downloads\Eric\jython"}
+
+elif platform.node() == 'ERIC-PC':
+    downloads_dir = {'B4': r"C:\Users\ERIC\Dropbox\projects\programming\2020\python\autoNMRinput",
+                     'A4': "/data/downloads/Eric",
+                     'N4': "/data/downloads/Eric"}
+                     
+    auto_dir = {'N4': "/opt/topspin4.0.6/prog/tmp",
+                'A4': "/opt/topspin3.2_pl3/prog/tmp",
+                'B4':  r"C:\Users\ERIC\Dropbox\projects\programming\2020\python\autoNMRinput"}
+else:
+    downloads_dir = {'B4': "/data/downloads/Eric",
+                     'A4': "/data/downloads/Eric",
+                     'N4': "/data/downloads/Eric"}
+
+    auto_dir = {'N4': "/opt/topspin4.0.6/prog/tmp",
+                'A4': "/opt/topspin3.2_pl3/prog/tmp",
+                'B4':  "/opt/topspin3.2_pl3/prog/tmp"}
+                
+                
+computer_name = platform.node()
+spec_name = spectrometers[computer_name]
 
 def return_auto_fn( fn, directory ):
 
@@ -120,6 +143,7 @@ def return_auto_fn( fn, directory ):
 class CommandLineArgs:
     
     def __init__(self, argv):
+        self.data = argv[0]
         self.fn = argv[1]
         self.holder_offset = int(argv[2])
 
@@ -143,22 +167,27 @@ def submitNMRexpts( argv ):
 
     # read in csv file and store as a list of dictionaries
     # one dictionary for each line
-    expt_list = []
-    f = open(fn, 'r')
-    reader = csv.DictReader(f)
-    for row in reader:		
-        expt_list.append(row)
-    f.close()
+    # expt_list = []
+    # f = open(fn, 'r')
+    # reader = csv.DictReader(f)
+    # for row in reader:		
+    #     expt_list.append(row)
+    # f.close()
     
     # Check to see if all experiments can be run chosen spectrometers
     # if not, output an error message 
     # and do not start creating NMR automation file
     ok_to_run = True
-    for expt in expt_list:
-        if expt['Experiment'] not in experiments[spec_name].keys():
+    for expt in args.data:
+        #
+        # check to see if pulse sequence will run on current spectrometer
+        # skip any high field cases
+        if expt[3] == "High Field":
+            continue
+        if expt[3] not in experiments[spec_name].keys():
             ok_to_run = False
             errorNumber= 2
-            error_message = 'Experiment \"' + expt['Experiment'] + '\" can not be run on spectrometer ' + spec_name
+            error_message = 'Experiment \"' + expt[3] + '\" can not be run on spectrometer ' + spec_name
             print ""
             print "------------------------- Error ---- Error ------------------------------------"
             print ""
@@ -168,34 +197,34 @@ def submitNMRexpts( argv ):
             print ""
             print "-------------------------------------------------------------------------------"
             print ""
-            break
             return errorNumber
 
     # Check that holder offset is a positive integer greater than 0 and less than 61
-    if (args.holder_offset < 1) or args.holder_offset > 60:
-        ok_to_run = False
-        errorNumber = 3
-        error_message = 'Holder starting position is \"' + str(args.holder_offset) +  '\"  it should be between 1 and 60 inclusive'
-        print ""
-        print "------------------------- Error ---- Error ------------------------------------"
-        print ""
-        print error_message
-        print 'Choose a different starting position in the carousel'
-        print 'Program Quitting!!!'
-        print ""
-        print "-------------------------------------------------------------------------------"
-        print ""
-        return errorNumber
+    for expt in args.data:
+        if (int(expt[1]) < 1) and (expt[3] != "High Field") or (int(expt[1]) > 60):
+            # ok_to_run = False
+            errorNumber = 3
+            error_message = 'A Holder starting position is \"' + str(expt[1]) +  '\"  it should be between 1 and 60 inclusive'
+            print ""
+            print "------------------------- Error ---- Error ------------------------------------"
+            print ""
+            print error_message
+            print 'Choose a different starting position in the carousel'
+            print 'Program Quitting!!!'
+            print ""
+            print "-------------------------------------------------------------------------------"
+            print ""
+            return errorNumber
 
     # Check to see that carousel starting position is compatible with the number of samples to be run
     # ie holder_offset should be chosen so that last sample position is equal or less than 60   
-    last_sample_position = args.holder_offset - 1 + int(expt_list[-1]['sample #'])
-    if last_sample_position > 60:
+    # last_sample_position = args.holder_offset - 1 + int(expt_list[-1]['sample #'])
+    if int(args.data[-1][1]) > 60:
         ok_to_run = False
         errorNumber = 4
-        error_message = 'Too many samples for carousel starting position, last sample position will exceed 60\n'
-        error_message = error_message + 'Number of samples equals ' + expt_list[-1]['sample #'] + '\n'
-        error_message = error_message + 'Carousel starting position equals ' + str(args.holder_offset)
+        error_message = 'Too many samples for carousel starting position, last sample position exceeds 60\n'
+        # error_message = error_message + 'Number of samples equals ' + expt_list[-1]['sample #'] + '\n'
+        error_message = error_message + 'Carousel starting position equals ' + str(args.data[-1][1])
         print ""
         print "-------------------------------- Error ---- Error ---------------------------------------"
         print ""
@@ -217,15 +246,19 @@ def submitNMRexpts( argv ):
     holder_offset = args.holder_offset-1
     holder_old = 0
 
-    for expt in expt_list:
-        holder = int(expt['sample #'])
-        name = expt['Name']
-        solvent = expt['Solvent']
-        title = expt['Group'] + ':' + expt['Member'] + ':' + expt['Sample Name']
-        experiment = expt['Experiment']
-        if holder_old < holder:
+    for expt in args.data:
+        #
+        # if expt for high field skip it
+        if expt[3] == "High Field":
+            continue
+        holder = expt[1]
+        name = expt[2]
+        solvent = expt[4]
+        title = expt[5] + ':' + expt[6] + ':' + expt[7]
+        experiment = expt[3]
+        if holder_old != holder:
             print "#"
-            print "HOLDER " + str(holder + holder_offset)
+            print "HOLDER " + str(holder)
             print "NAME " + name
             print "EXPNO 10"
             print "SOLVENT " + solvents[spec_name][solvent]
@@ -233,7 +266,7 @@ def submitNMRexpts( argv ):
             print "TITLE " + title
             
             f.write("#" +"\n")
-            f.write( "HOLDER " + str(holder + holder_offset) +"\n")
+            f.write( "HOLDER " + str(holder) +"\n")
             f.write("NAME " + name +"\n")
             f.write("EXPNO 10" +"\n")
             f.write("SOLVENT " + solvents[spec_name][solvent] +"\n")
@@ -257,9 +290,9 @@ def submitNMRexpts( argv ):
     # write out CSV file again but now with holder position column
     # and spectrometer used
         
-    for expt in expt_list:
-        expt['Holder'] = int(expt['sample #']) + args.holder_offset - 1
-        expt['Spectrometer'] = spec_name
+    # for expt in expt_list:
+    #     expt['Holder'] = int(expt['sample #']) + args.holder_offset - 1
+    #     expt['Spectrometer'] = spec_name
         
     print "fn", fn
     s1, s2 = fn.rsplit('.', 1)
@@ -268,8 +301,7 @@ def submitNMRexpts( argv ):
 
 
     csvfile = open(fn2, 'w')
-    fieldnames = ['Spectrometer', 
-                  'sample #',
+    fieldnames = ['sample #',
                   'Holder',
                   'Name',
                   'Experiment',
@@ -280,11 +312,15 @@ def submitNMRexpts( argv ):
                   
     csvfile.write(','.join(fieldnames))
     csvfile.write('\n')
+    
+    for expt in args.data:
+        csvfile.write(','.join([ str(v) for v in expt]))
+        csvfile.write('\n')
+        
+    # writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
 
-    writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
-
-    for expt in expt_list:
-        writer.writerow(expt)
+    # for expt in expt_list:
+    #     writer.writerow(expt)
         
     csvfile.close()
     

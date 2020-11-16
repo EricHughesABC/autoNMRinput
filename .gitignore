@@ -8,6 +8,11 @@ __pycache__/
 
 # CSV files
 *.csv
+*.txt
+*.jar
+
+# Java compiled classes
+*.class
 
 # Distribution / packaging
 .Python

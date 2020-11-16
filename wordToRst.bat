@@ -1,0 +1,1 @@
+pandoc  --extract-media . -o Instructions_for_jBrukerSubmit.rst Instructions_for_jBrukerSubmit.docx
